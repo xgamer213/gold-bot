@@ -78,7 +78,7 @@ class Notifier:
                 "text": message
             }
             proxies = {"http": settings.TELEGRAM_PROXY, "https": settings.TELEGRAM_PROXY} if getattr(settings, "TELEGRAM_PROXY", None) else None
-            res = requests.post(url, json=payload, timeout=10, proxies=proxies)
+            res = requests.post(url, json=payload, timeout=25, proxies=proxies)
             if res.status_code == 200:
                 logger.info("Telegram notification successfully sent!")
                 return True
@@ -280,6 +280,8 @@ class Notifier:
             print(f" {color_tag} INSTITUTIONAL SIGNAL TRIGGERED: {data.get('symbol')} {action} ({data.get('grade')})")
             print("=" * 65)
             print(f"  * Confluence Score   : {data.get('confluence_score')}% (Target: {settings.MIN_CONFLUENCE_SCORE}%+)")
+            print(f"  * Risk Rate          : {plan.get('risk_badge', '🛡️ No risk')}")
+            print(f"  * Entry Zone         : {plan.get('entry_zone', 'N/A')}")
             print(f"  * Entry Price        : ${plan.get('entry_price', 'N/A')}")
             print(f"  * Stop Loss          : ${plan.get('stop_loss', 'N/A')} (Risk: {plan.get('sl_distance_points')} pts / {plan.get('sl_distance_pips')} pips)")
             print(f"  * Take Profit 1 (1:1.5) : ${plan.get('tp1', 'N/A')} (Close 50% + Move SL to Breakeven)")
@@ -344,6 +346,12 @@ class Notifier:
                 <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Based on ${plan.get('account_balance', 10000)} Account @ {plan.get('risk_percent', 1.0)}% Risk (${plan.get('max_dollar_risk', 100)} Max Loss)</div>
               </div>
 
+              <div class="card" style="text-align:center; border: 1px solid #334155;">
+                <div class="metric-label">MARKET RISK ASSESSMENT</div>
+                <div style="font-size: 18px; font-weight: bold; margin-top: 4px;">{plan.get('risk_badge', '🛡️ No risk')}</div>
+                <div style="font-size: 13px; color: #94a3b8; margin-top: 6px;">Confirmed Entry Zone: <strong style="color:#f8fafc;">{plan.get('entry_zone', 'N/A')}</strong></div>
+              </div>
+
               <div class="card">
                 <div style="font-size: 14px; font-weight: bold; color: #94a3b8; margin-bottom: 12px;">EXECUTION SPECIFICATIONS</div>
                 <div class="grid">
@@ -382,7 +390,7 @@ class Notifier:
 
               <div class="card" style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
                 <strong>⚡ TRADE MANAGEMENT PROTOCOL:</strong><br>
-                1. Enter at confirmed entry.<br>
+                1. Enter strictly within Entry Zone: <strong>{plan.get('entry_zone', 'N/A')}</strong>.<br>
                 2. When <strong>TP1</strong> is hit, close 50% and move Stop Loss to Breakeven.<br>
                 3. Let remaining 50% run toward TP2 / TP3.<br>
               </div>
@@ -397,6 +405,11 @@ class Notifier:
         """
 
     def _build_signal_plain(self, symbol, signal, grade, score, plan, reasons, news, user_name="Ahmed") -> str:
+        risk_rate_display = plan.get("risk_badge") or ("⚠️ There's a high risk in this trade" if plan.get("is_volatile") else "🛡️ No risk")
+        entry_price = plan.get('entry_price')
+        default_zone = f"${entry_price - 0.75:.2f} - ${entry_price + 0.75:.2f}" if entry_price is not None else "N/A"
+        entry_zone_display = plan.get("entry_zone") or default_zone
+
         return f"""
 =========================================
 🚨 HEY {user_name.upper()}! TRADE SIGNAL ({grade})
@@ -406,6 +419,8 @@ I've found a clear setup of high accuracy ({score}% Confluence). Take this trade
 
 Pair                 : {symbol}
 Action               : {signal}
+Risk Rate            : {risk_rate_display}
+Entry Zone           : {entry_zone_display}
 Entry Price          : ${plan.get('entry_price')}
 Stop Loss (SL)       : ${plan.get('stop_loss')}
 Take Profit 1 (TP1)  : ${plan.get('tp1')}
@@ -423,6 +438,7 @@ Technical Confluence:
 {chr(10).join(['- ' + r for r in reasons])}
 
 Trade Management:
+- Execute strictly within Entry Zone: {entry_zone_display}
 - Close 50% at TP1, move SL to Breakeven.
 =========================================
 """

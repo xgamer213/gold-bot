@@ -584,10 +584,12 @@ Ask me to review a trade idea, calculate your lot size, check upcoming CPI/NFP n
 
       <!-- Quick Action Chips -->
       <div class="quick-chips">
+        <div class="chip" style="color: var(--gold-primary); font-weight: bold; border-color: var(--gold-primary);" onclick="sendQuickPrompt('Give me a live trade signal on Gold right now')">⚡ Give Me A Signal</div>
         <div class="chip" onclick="sendQuickPrompt('What is Gold doing right now?')">📊 Gold Trend</div>
         <div class="chip" onclick="sendQuickPrompt('Calculate lot size for balance 10000 risk 1% entry 2685 SL 2679')">📐 Calc Lots</div>
         <div class="chip" onclick="sendQuickPrompt('Will Gold crash tomorrow? Show me the market prediction')">🔮 Crash Outlook</div>
         <div class="chip" onclick="sendQuickPrompt('When is the next high impact CPI or NFP news?')">📰 CPI/NFP News</div>
+        <div class="chip" onclick="sendQuickPrompt('Explain Fair Value Gaps (FVG) and how to trade them')">📚 Explain FVG</div>
       </div>
 
       <!-- Input Bar -->

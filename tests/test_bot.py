@@ -134,6 +134,27 @@ class TestTradingBot(unittest.TestCase):
         self.assertIn("Non-Farm Payrolls (NFP)", plain)
         self.assertIn("New trade entries are FROZEN", plain)
 
+    def test_risk_rate_and_entry_zone(self):
+        """Verify dynamic risk rate (high risk in volatile vs no risk in calm) and entry zone."""
+        # Calm market
+        calm_plan = self.risk_calc.calculate_trade_setup("XAUUSD", "BUY", 2680.0, 2674.0, atr_val=3.5)
+        self.assertEqual(calm_plan["risk_warning"], "No risk")
+        self.assertEqual(calm_plan["risk_badge"], "🛡️ No risk")
+        self.assertIn("2679.25 - $2680.75", calm_plan["entry_zone"])
+
+        # Volatile market
+        volatile_plan = self.risk_calc.calculate_trade_setup("XAUUSD", "BUY", 2680.0, 2674.0, atr_val=7.5)
+        self.assertEqual(volatile_plan["risk_warning"], "There's a high risk in this trade")
+        self.assertEqual(volatile_plan["risk_badge"], "⚠️ There's a high risk in this trade")
+
+        # Verify Plain signal output contains exact wording
+        from core.notifier import notifier
+        signal_text = notifier._build_signal_plain("XAUUSD", "BUY", "Grade A+", 95, volatile_plan, ["Test reason"], {"reason": "Clear"}, "Ahmed")
+        self.assertIn("Risk Rate            : ⚠️ There's a high risk in this trade", signal_text)
+        self.assertIn("Entry Zone           : $2679.25 - $2680.75", signal_text)
+        self.assertIn("Stop Loss (SL)       : $2674.0", signal_text)
+        self.assertIn("Take Profit 1 (TP1)  : $2689.0", signal_text)
+
 
 if __name__ == "__main__":
     unittest.main()

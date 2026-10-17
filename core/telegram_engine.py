@@ -144,16 +144,21 @@ class TelegramChatEngine:
                 f"👋 **Hey {self.user_name}! Welcome to your Institutional Trading Bot!**\n\n"
                 f"I track Gold (XAU/USD) & Forex 24/7 with SMC Fair Value Gaps, Liquidity Sweeps, and ForexFactory News.\n\n"
                 f"📌 **Quick Commands:**\n"
+                f"• `/signal` - Run a live scan on Gold and get an immediate Grade A+ trade blueprint\n"
                 f"• `/predict` - Get the latest forward-looking Gold crash/rally forecast\n"
                 f"• `/news` - Check upcoming high-impact economic releases (CPI, NFP, FOMC)\n"
                 f"• `/status` - Bot health & active account settings\n\n"
                 f"💬 **You can also chat with me naturally!** For example:\n"
+                f"• *'Give me a signal on Gold right now'*\n"
                 f"• *'What is Gold doing right now?'*\n"
                 f"• *'Calculate lot size for $10k balance with $6 SL on Gold'*\n"
-                f"• *'Should I buy Gold at 2685 with SL 2679?'*\n"
+                f"• *'What is a Fair Value Gap (FVG)?'*\n"
                 f"• *'Will Gold crash this week?'*\n\n"
-                f"Whenever a Grade A+ setup occurs on TradingView or news is 30 mins away, I'll alert you right here! 🚀"
+                f"Whenever a Grade A+ setup occurs or news is 30 mins away, I'll buzz you right here! 🚀"
             )
+
+        if cmd in ["/signal", "signal", "/trade", "trade"]:
+            return self.chat_engine._handle_signal_request()
 
         if cmd == "/predict":
             outlook = predictive_engine.generate_market_outlook("XAUUSD")

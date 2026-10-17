@@ -145,7 +145,8 @@ class TechnicalEngine:
             symbol=symbol,
             action=signal_type,
             entry_price=current_price,
-            stop_loss=stop_loss
+            stop_loss=stop_loss,
+            atr_val=atr
         )
 
         grade = "Grade A+ (Institutional)" if final_score >= 90 else "Grade A"
@@ -216,6 +217,7 @@ class TechnicalEngine:
             stop_loss = round(price - buffer if action == "BUY" else price + buffer, 2 if is_gold else 5)
         else:
             stop_loss = provided_sl
+            buffer = abs(price - stop_loss)
 
         # Calculate exact lot sizing and TP1/TP2
         trade_plan = risk_calculator.calculate_trade_setup(
@@ -223,6 +225,7 @@ class TechnicalEngine:
             action=action,
             entry_price=price,
             stop_loss=stop_loss,
+            atr_val=buffer,
             custom_tp1=provided_tp1,
             custom_tp2=provided_tp2
         )

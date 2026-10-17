@@ -22,6 +22,8 @@ class RiskCalculator:
         stop_loss: float,
         balance: Optional[float] = None,
         risk_pct: Optional[float] = None,
+        atr_val: Optional[float] = None,
+        is_volatile: Optional[bool] = None,
         custom_tp1: Optional[float] = None,
         custom_tp2: Optional[float] = None
     ) -> Dict[str, Any]:
@@ -102,14 +104,41 @@ class RiskCalculator:
         # Expected gains at targets
         gain_tp1 = round(sl_distance * 1.5 * (100.0 if is_gold else 10.0) * recommended_lot, 2)
         gain_tp2 = round(sl_distance * 3.0 * (100.0 if is_gold else 10.0) * recommended_lot, 2)
+        gain_tp3 = round(sl_distance * 5.0 * (100.0 if is_gold else 10.0) * recommended_lot, 2)
+
+        # Calculate Entry Zone
+        if is_gold:
+            zone_buffer = 0.75
+            entry_zone = f"${entry_price - zone_buffer:.2f} - ${entry_price + zone_buffer:.2f}"
+        else:
+            zone_buffer = 0.0003
+            entry_zone = f"{entry_price - zone_buffer:.5f} - {entry_price + zone_buffer:.5f}"
+
+        # Evaluate Market Volatility and Risk Rate
+        # High Risk: Elevated ATR (> 6.0 on Gold) or high volatility flag
+        # No Risk: Stable institutional volatility with calm structure
+        is_high_risk = is_volatile is True or (atr_val is not None and atr_val >= 6.0)
+        if is_high_risk:
+            risk_rate = "High Risk"
+            risk_warning = "There's a high risk in this trade"
+            risk_badge = "⚠️ There's a high risk in this trade"
+        else:
+            risk_rate = "No Risk"
+            risk_warning = "No risk"
+            risk_badge = "🛡️ No risk"
 
         return {
             "symbol": sym,
             "action": action,
             "entry_price": round(entry_price, 2 if is_gold else 5),
+            "entry_zone": entry_zone,
             "stop_loss": round(stop_loss, 2 if is_gold else 5),
             "sl_distance_points": round(sl_distance, 2 if is_gold else 5),
             "sl_distance_pips": round(pip_distance, 1),
+            "risk_rate": risk_rate,
+            "risk_warning": risk_warning,
+            "risk_badge": risk_badge,
+            "is_volatile": is_high_risk,
             "tp1": tp1,
             "tp2": tp2,
             "tp3": tp3,
@@ -123,8 +152,9 @@ class RiskCalculator:
             "recommended_lot_size": recommended_lot,
             "expected_gain_tp1": gain_tp1,
             "expected_gain_tp2": gain_tp2,
+            "expected_gain_tp3": gain_tp3,
             "trade_management_rules": [
-                "1. Execute entry strictly at the confirmed entry price.",
+                "1. Execute entry strictly within the confirmed Entry Zone.",
                 "2. When TP1 is hit, close 50% of the position immediately and move Stop Loss to Breakeven (+ spread buffer).",
                 "3. When TP2 is hit, close 30% of position and trail stop under previous 15m structural swing.",
                 "4. Hold remaining 20% for TP3 extended runner."

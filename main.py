@@ -212,7 +212,7 @@ def main():
         # 2. Start background scheduler
         scheduler = BackgroundScheduler()
         scheduler.add_job(news_engine.refresh_calendar, "interval", minutes=30)
-        scheduler.add_job(run_scheduled_scan, "interval", minutes=15)
+        scheduler.add_job(run_scheduled_scan, "interval", minutes=3)
         scheduler.add_job(run_predictive_outlook, "interval", hours=12)
         # Check every 2 minutes for upcoming news in the 30-minute window
         scheduler.add_job(news_engine.check_and_trigger_30min_alerts, "interval", minutes=2)
