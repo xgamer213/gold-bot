@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+gold_forex_bot_package.zip
+.venv/
+venv/

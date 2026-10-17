@@ -1,0 +1,143 @@
+//@version=5
+indicator("Gold Sniper - Institutional SMC & Confluence Engine [XAU/USD]", overlay=true, max_boxes_count=100, max_lines_count=100, max_labels_count=100)
+
+// =============================================================================
+// INPUTS & CONFIGURATION
+// =============================================================================
+group_main   = "Strategy & Confluence Settings"
+webhook_key  = input.string("GOLD_SNIPER_SECRET_KEY_9988", "Bot Webhook Secret Token", group=group_main, tooltip="Match this with WEBHOOK_SECRET_TOKEN in your bot's .env file")
+min_conf     = input.int(85, "Minimum Confluence Score % (Quality Filter)", minval=70, maxval=95, group=group_main, tooltip="Rejects low-probability noise signals. Only triggers Grade A/A+ trades.")
+risk_reward1 = input.float(1.5, "Take Profit 1 Risk:Reward", minval=1.0, maxval=3.0, step=0.1, group=group_main)
+risk_reward2 = input.float(3.0, "Take Profit 2 Risk:Reward", minval=2.0, maxval=6.0, step=0.1, group=group_main)
+
+group_trend  = "Trend & Moving Averages"
+ema_fast_len = input.int(50, "Fast Trend EMA", group=group_trend)
+ema_slow_len = input.int(200, "Slow Institutional Baseline EMA", group=group_trend)
+
+group_atr    = "Volatility & Dynamic ATR Risk"
+atr_length   = input.int(14, "ATR Length", group=group_atr)
+atr_sl_mult  = input.float(1.5, "ATR Stop Loss Multiplier", minval=0.8, maxval=3.0, step=0.1, group=group_atr)
+
+group_sessions = "Institutional Sessions (UTC)"
+asia_session = input.session("0000-0700", "Asian Session (Liquidity Accumulation)", group=group_sessions)
+show_fvg     = input.bool(true, "Highlight Fair Value Gaps (FVG)", group=group_sessions)
+
+// =============================================================================
+// INDICATOR CALCULATIONS
+// =============================================================================
+ema_fast = ta.ema(close, ema_fast_len)
+ema_slow = ta.ema(close, ema_slow_len)
+atr_val  = ta.atr(atr_length)
+
+// Plot EMAs
+plot(ema_fast, "Fast EMA", color=color.new(#3b82f6, 20), linewidth=2)
+plot(ema_slow, "Institutional EMA 200", color=color.new(#f59e0b, 10), linewidth=2)
+
+// Trend Direction
+bullish_trend = close > ema_fast and ema_fast > ema_slow
+bearish_trend = close < ema_fast and ema_fast < ema_slow
+
+// 1. Fair Value Gap (FVG) Detection
+bullish_fvg = (low > high[2]) and (close[1] > high[2])
+bearish_fvg = (high < low[2]) and (close[1] < low[2])
+
+if show_fvg and bullish_fvg
+    box.new(left=bar_index - 2, top=low, right=bar_index, bottom=high[2], border_color=color.new(color.green, 70), bgcolor=color.new(color.green, 85))
+
+if show_fvg and bearish_fvg
+    box.new(left=bar_index - 2, top=low[2], right=bar_index, bottom=high, border_color=color.new(color.red, 70), bgcolor=color.new(color.red, 85))
+
+// 2. Liquidity Sweeps (Session & Swing High/Low)
+swing_high = ta.highest(high, 15)[1]
+swing_low  = ta.lowest(low, 15)[1]
+
+bullish_sweep = (low[1] < swing_low) and (close > swing_low) and (close > open)
+bearish_sweep = (high[1] > swing_high) and (close < swing_high) and (close < open)
+
+// 3. Momentum & Rejection Confirmation
+rsi_val = ta.rsi(close, 14)
+rsi_bullish = rsi_val > 42 and rsi_val < 68
+rsi_bearish = rsi_val < 58 and rsi_val > 32
+
+// =============================================================================
+// CONFLUENCE SCORING ENGINE (0 - 100%)
+// =============================================================================
+var int buy_score = 0
+var int sell_score = 0
+
+buy_score := 0
+if bullish_trend
+    buy_score := buy_score + 30
+else if close > ema_fast
+    buy_score := buy_score + 15
+
+if bullish_sweep
+    buy_score := buy_score + 35
+if bullish_fvg or bullish_fvg[1]
+    buy_score := buy_score + 20
+if rsi_bullish
+    buy_score := buy_score + 15
+
+sell_score := 0
+if bearish_trend
+    sell_score := sell_score + 30
+else if close < ema_fast
+    sell_score := sell_score + 15
+
+if bearish_sweep
+    sell_score := sell_score + 35
+if bearish_fvg or bearish_fvg[1]
+    sell_score := sell_score + 20
+if rsi_bearish
+    sell_score := sell_score + 15
+
+// Trigger Conditions
+valid_buy  = (buy_score >= min_conf) and ta.crossover(close, ema_fast) or (bullish_sweep and bullish_trend and buy_score >= min_conf)
+valid_sell = (sell_score >= min_conf) and ta.crossunder(close, ema_fast) or (bearish_sweep and bearish_trend and sell_score >= min_conf)
+
+// Prevent Multiple consecutive signals on same bar
+var int last_signal_bar = 0
+signal_cooldown = bar_index - last_signal_bar > 5
+
+confirmed_buy  = valid_buy and signal_cooldown
+confirmed_sell = valid_sell and signal_cooldown
+
+if confirmed_buy or confirmed_sell
+    last_signal_bar := bar_index
+
+// Dynamic Stop Loss and Take Profits
+buy_sl   = math.round_to_mintick(close - (atr_sl_mult * atr_val))
+buy_tp1  = math.round_to_mintick(close + (risk_reward1 * (close - buy_sl)))
+buy_tp2  = math.round_to_mintick(close + (risk_reward2 * (close - buy_sl)))
+
+sell_sl  = math.round_to_mintick(close + (atr_sl_mult * atr_val))
+sell_tp1 = math.round_to_mintick(close - (risk_reward1 * (sell_sl - close)))
+sell_tp2 = math.round_to_mintick(close - (risk_reward2 * (sell_sl - close)))
+
+// =============================================================================
+// VISUAL PLOTS & LABELS
+// =============================================================================
+plotshape(confirmed_buy, title="BUY Signal Shape", location=location.belowbar, color=#10b981, style=shape.triangleup, size=size.normal)
+plotshape(confirmed_sell, title="SELL Signal Shape", location=location.abovebar, color=#ef4444, style=shape.triangledown, size=size.normal)
+
+if confirmed_buy
+    label_text = "🟢 BUY (Grade A+)\nEntry: $" + str.tostring(close, "#.##") + "\nSL: $" + str.tostring(buy_sl, "#.##") + "\nTP1: $" + str.tostring(buy_tp1, "#.##") + "\nTP2: $" + str.tostring(buy_tp2, "#.##") + "\nConf: " + str.tostring(buy_score) + "%"
+    label.new(bar_index, low - (atr_val * 0.8), text=label_text, color=#064e3b, textcolor=color.white, style=label.style_label_up, size=size.small)
+    
+    // Prepare JSON payload for Webhook
+    json_payload = '{"secret":"' + webhook_key + '","symbol":"' + syminfo.ticker + '","action":"BUY","price":' + str.tostring(close) + ',"stop_loss":' + str.tostring(buy_sl) + ',"tp1":' + str.tostring(buy_tp1) + ',"tp2":' + str.tostring(buy_tp2) + ',"timeframe":"' + timeframe.period + '","strategy":"GoldSniper_Pine_A_Plus"}'
+    alert(json_payload, alert.freq_once_per_bar_close)
+
+if confirmed_sell
+    label_text = "🔴 SELL (Grade A+)\nEntry: $" + str.tostring(close, "#.##") + "\nSL: $" + str.tostring(sell_sl, "#.##") + "\nTP1: $" + str.tostring(sell_tp1, "#.##") + "\nTP2: $" + str.tostring(sell_tp2, "#.##") + "\nConf: " + str.tostring(sell_score) + "%"
+    label.new(bar_index, high + (atr_val * 0.8), text=label_text, color=#7f1d1d, textcolor=color.white, style=label.style_label_down, size=size.small)
+    
+    // Prepare JSON payload for Webhook
+    json_payload = '{"secret":"' + webhook_key + '","symbol":"' + syminfo.ticker + '","action":"SELL","price":' + str.tostring(close) + ',"stop_loss":' + str.tostring(sell_sl) + ',"tp1":' + str.tostring(sell_tp1) + ',"tp2":' + str.tostring(sell_tp2) + ',"timeframe":"' + timeframe.period + '","strategy":"GoldSniper_Pine_A_Plus"}'
+    alert(json_payload, alert.freq_once_per_bar_close)
+
+// =============================================================================
+// ALERT CONDITIONS (For TradingView Alert Dialog)
+// =============================================================================
+alertcondition(confirmed_buy, title="Gold Sniper: Confirmed BUY Alert", message='{"secret":"GOLD_SNIPER_SECRET_KEY_9988","symbol":"{{ticker}}","action":"BUY","price":{{close}},"timeframe":"{{interval}}"}')
+alertcondition(confirmed_sell, title="Gold Sniper: Confirmed SELL Alert", message='{"secret":"GOLD_SNIPER_SECRET_KEY_9988","symbol":"{{ticker}}","action":"SELL","price":{{close}},"timeframe":"{{interval}}"}')
