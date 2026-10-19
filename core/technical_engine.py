@@ -5,6 +5,7 @@ with Multi-Timeframe Trend and Volatility (ATR) to produce high-probability (Gra
 """
 
 import logging
+import requests
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -21,12 +22,43 @@ class TechnicalEngine:
     def __init__(self):
         pass
 
+    def _fetch_realtime_gold(self, timeframe: str = "15m", limit: int = 100) -> Optional[pd.DataFrame]:
+        """
+        Fetches live real-time Spot Gold (PAXGUSDT) with ZERO latency.
+        PAXG is 1:1 backed by 1 Troy Ounce of fine physical Gold in London Brink's vaults.
+        Eliminates the 15-minute delay from free Yahoo Finance futures.
+        """
+        try:
+            interval = "15m" if "15" in timeframe else ("1h" if "1h" in timeframe else ("1m" if "1m" in timeframe else "15m"))
+            url = f"https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval={interval}&limit={limit}"
+            res = requests.get(url, timeout=4)
+            if res.status_code == 200:
+                raw = res.json()
+                if raw and len(raw) >= 25:
+                    cols = ['OpenTime','Open','High','Low','Close','Volume','CloseTime','QAV','NumTrades','TakerBase','TakerQuote','Ignore']
+                    df = pd.DataFrame(raw, columns=cols)
+                    df['Datetime'] = pd.to_datetime(df['OpenTime'], unit='ms', utc=True)
+                    df.set_index('Datetime', inplace=True)
+                    for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+                        df[col] = df[col].astype(float)
+                    return df[['Open', 'High', 'Low', 'Close', 'Volume']]
+        except Exception as e:
+            logger.debug(f"Real-time gold feed check: {e}")
+        return None
+
     def fetch_market_data(self, symbol: str = "XAUUSD", timeframe: str = "15m", period: str = "5d") -> Optional[pd.DataFrame]:
         """
-        Fetches historical OHLCV data using yfinance.
-        Maps XAUUSD to GC=F (Gold Futures), EURUSD to EURUSD=X, etc.
+        Fetches live OHLCV data.
+        Prioritizes real-time 0-delay Spot Gold feed, with yfinance as secondary fallback.
         """
         sym_clean = symbol.upper().replace("/", "")
+
+        # 1. Prioritize zero-delay live Spot Gold feed
+        if any(g in sym_clean for g in ["XAU", "GOLD"]):
+            live_df = self._fetch_realtime_gold(timeframe=timeframe)
+            if live_df is not None and not live_df.empty and len(live_df) >= 25:
+                return live_df
+
         ticker_map = {
             "XAUUSD": "GC=F",
             "GOLD": "GC=F",
