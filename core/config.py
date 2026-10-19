@@ -15,7 +15,7 @@ load_dotenv(dotenv_path=ENV_PATH)
 
 class Settings(BaseModel):
     # Account & Risk Parameters
-    ACCOUNT_BALANCE: float = Field(default=float(os.getenv("ACCOUNT_BALANCE", "10000.0")), description="Trading account balance in USD")
+    ACCOUNT_BALANCE: float = Field(default=float(os.getenv("ACCOUNT_BALANCE", "100.0")), description="Trading account balance in USD")
     RISK_PERCENT: float = Field(default=float(os.getenv("RISK_PERCENT", "1.0")), description="Risk per trade in percentage (e.g. 1.0 for 1%)")
     MAX_DAILY_RISK_PERCENT: float = Field(default=float(os.getenv("MAX_DAILY_RISK_PERCENT", "3.0")), description="Maximum drawdown tolerated per day before cooling off")
     DEFAULT_RISK_REWARD: float = Field(default=float(os.getenv("DEFAULT_RISK_REWARD", "2.0")), description="Minimum Risk to Reward Ratio")

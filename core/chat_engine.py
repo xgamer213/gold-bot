@@ -110,7 +110,7 @@ class ChatEngine:
                 f"💰 **Take Profit 1 (TP1):** ${plan.get('tp1', 0.0):,.2f} *(Close 50% & SL to Breakeven)*\n"
                 f"💰 **Take Profit 2 (TP2):** ${plan.get('tp2', 0.0):,.2f}\n"
                 f"💰 **Take Profit 3 (TP3):** ${plan.get('tp3', 0.0):,.2f} *(Runner)*\n"
-                f"⚖️ **Recommended Lot:** {plan.get('recommended_lot_size', 0.16)} Lots (1.0% Risk / $100 on $10k)\n\n"
+                f"⚖️ **Recommended Lot:** {plan.get('recommended_lot_size', 0.01)} Lots (Account: ${plan.get('account_balance', settings.ACCOUNT_BALANCE):,.0f} | Risk: ${plan.get('actual_dollar_risk', 5.0):,.2f})\n\n"
                 f"📌 **SMC Reasons:** {scan.get('reason', 'Trend + FVG + Liquidity confirmed.')}\n\n"
                 f"🚀 *I have also pushed this alert directly to your Telegram! Take this trade with strict risk management.*"
             )
@@ -226,9 +226,9 @@ class ChatEngine:
         sl_points = 6.0
 
         if len(numbers) >= 2:
-            balance = max(numbers[0], numbers[1]) if any(n > 500 for n in numbers) else settings.ACCOUNT_BALANCE
-            sl_points = min(numbers[0], numbers[1]) if any(n > 500 for n in numbers) else (numbers[1] if numbers[0] == balance else numbers[0])
-        elif len(numbers) == 1 and numbers[0] > 500:
+            balance = max(numbers[0], numbers[1]) if any(n >= 50 for n in numbers) else settings.ACCOUNT_BALANCE
+            sl_points = min(numbers[0], numbers[1]) if any(n >= 50 for n in numbers) else (numbers[1] if numbers[0] == balance else numbers[0])
+        elif len(numbers) == 1 and numbers[0] >= 50:
             balance = numbers[0]
         elif len(numbers) == 1 and numbers[0] < 50:
             sl_points = numbers[0]
