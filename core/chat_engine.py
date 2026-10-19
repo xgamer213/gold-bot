@@ -124,7 +124,7 @@ class ChatEngine:
                 f"• Strategy: Wait 10 minutes post-release. I will evaluate the fundamental shock and give you a high-probability momentum continuation setup!"
             )
 
-        # Market in active consolidation / scanning
+        # Market in active consolidation / scanning (Below 85% Confluence)
         df = technical_engine.fetch_market_data("XAUUSD", timeframe="15m", period="5d")
         ema200 = price - 12.0
         atr = 5.5
@@ -135,32 +135,21 @@ class ChatEngine:
 
         bias = "BULLISH" if price > ema200 else "BEARISH"
         action = "BUY" if bias == "BULLISH" else "SELL"
-        setup_entry = price - 4.0 if action == "BUY" else price + 4.0
-        setup_sl = setup_entry - (atr * 1.5) if action == "BUY" else setup_entry + (atr * 1.5)
-        setup_tp1 = setup_entry + (1.5 * abs(setup_entry - setup_sl)) if action == "BUY" else setup_entry - (1.5 * abs(setup_entry - setup_sl))
-        setup_tp2 = setup_entry + (3.0 * abs(setup_entry - setup_sl)) if action == "BUY" else setup_entry - (3.0 * abs(setup_entry - setup_sl))
-
-        plan = risk_calculator.calculate_trade_setup("XAUUSD", action, setup_entry, setup_sl, atr_val=atr)
-        risk_rate = plan.get('risk_badge', "🛡️ No risk")
-        entry_zone = plan.get('entry_zone', f"${setup_entry-0.75:.2f} - ${setup_entry+0.75:.2f}")
 
         return (
-            f"🎯 **LIVE GOLD (XAU/USD) SCAN FOR {self.user_name.upper()}**\n\n"
-            f"• **Live Market Price:** ${price:,.2f}\n"
-            f"• **Current Confluence Score:** {score}% *(Threshold: 85% for Grade A+)*\n"
+            f"⏳ **NO ACTIVE GRADE A+ SIGNAL RIGHT NOW, {self.user_name.upper()}!**\n\n"
+            f"🛑 **ACTION:** **DO NOT ENTER ANY TRADES RIGHT NOW**\n\n"
+            f"📊 **LIVE MARKET SNAPSHOT:**\n"
+            f"• **Live Price:** ${price:,.2f}\n"
+            f"• **Current Confluence Score:** **{score}%** *(We require 85%+ for Grade A+)*\n"
             f"• **Market Regime:** {bias} Consolidation (200 EMA Baseline: ${ema200:,.2f})\n"
-            f"• **Risk Rate:** {risk_rate}\n"
-            f"• **Status:** {scan.get('reason', 'Awaiting liquidity sweep confirmation.')}\n\n"
-            f"📋 **HIGH-PROBABILITY GAMEPLAN ON RADAR:**\n"
-            f"• **Setup Bias:** Institutional {action} on Liquidity Sweep / FVG retest\n"
-            f"• **Entry Zone:** {entry_zone}\n"
-            f"• **Optimal Entry Price:** ${setup_entry:,.2f}\n"
-            f"• **Stop Loss (SL):** ${setup_sl:,.2f} (-${abs(setup_entry-setup_sl):.2f})\n"
-            f"• **Take Profit 1 (TP1):** ${setup_tp1:,.2f} (1:1.5 RR)\n"
-            f"• **Take Profit 2 (TP2):** ${setup_tp2:,.2f} (1:3.0 RR)\n"
-            f"• **Take Profit 3 (TP3):** ${plan.get('tp3', setup_tp2 + 10.0):,.2f} (1:5.0 RR)\n"
-            f"• **Exact Sized Lot:** {plan.get('recommended_lot_size', 0.16)} Lots (1% Risk / $100)\n\n"
-            f"💡 *Remember Ahmed: We don't chase price in the middle of a range. I am scanning the market every 3 minutes in the background, and I will **automatically buzz your Telegram** the exact second the candle closes with 85%+ Grade A+ confluence!*"
+            f"• **Status:** {scan.get('reason', 'Awaiting liquidity sweep and structural displacement.')}\n\n"
+            f"🔍 **WHY WE ARE WAITING (CAPITAL PRESERVATION):**\n"
+            f"The market is currently in the middle of a move or range. Entering now would be **chasing price** without institutional confirmation, which risks getting stopped out.\n\n"
+            f"🔭 **WHAT THE BOT IS WATCHING FOR:**\n"
+            f"• Watching for price to retrace and tap key Fair Value Gaps (FVG) or sweep liquidity.\n"
+            f"• Potential bias on next setup: **{action}** (following the 15m trend).\n\n"
+            f"🚀 *Relax Ahmed: You don't have to watch the chart! The scanner is running in the background every 3 minutes. The exact moment an 85%+ confluence Grade A+ setup forms, your phone will buzz with an official [TAKE THIS TRADE] signal!*"
         )
 
     def _handle_news_query(self, msg_lower: str) -> str:
