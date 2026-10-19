@@ -57,7 +57,7 @@ class Settings(BaseModel):
     
     # Webhook Server for TradingView
     WEBHOOK_HOST: str = Field(default=os.getenv("WEBHOOK_HOST", "0.0.0.0"), description="Webhook server host")
-    WEBHOOK_PORT: int = Field(default=int(os.getenv("WEBHOOK_PORT", "8000")), description="Webhook server port")
+    WEBHOOK_PORT: int = Field(default=int(os.getenv("PORT", os.getenv("WEBHOOK_PORT", "8000"))), description="Webhook server port")
     WEBHOOK_SECRET_TOKEN: str = Field(default=os.getenv("WEBHOOK_SECRET_TOKEN", "GOLD_SNIPER_SECRET_KEY_9988"), description="Secret token to authenticate TradingView webhooks")
 
 
