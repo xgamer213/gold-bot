@@ -91,18 +91,21 @@ class ChatEngine:
         scan = technical_engine.evaluate_live_chart("XAUUSD")
         score = scan.get("confluence_score", 0)
         signal = scan.get("signal", "WAIT")
-        price = scan.get("current_price", 2685.0)
+        candidate = scan.get("candidate_signal", "BUY")
+        price = scan.get("current_price", 3970.0)
         news_eval = scan.get("news_eval", {})
+        plan = scan.get("trade_plan", {})
 
         if signal in ["BUY", "SELL"] and score >= settings.MIN_CONFLUENCE_SCORE:
-            plan = scan.get("trade_plan", {})
             risk_rate = plan.get('risk_badge', "🛡️ No risk")
             entry_zone = plan.get('entry_zone', f"${plan.get('entry_price', price)-0.75:.2f} - ${plan.get('entry_price', price)+0.75:.2f}")
+            grade = scan.get("grade", "Grade A")
+            reasons_str = "\n".join([f" • {r}" for r in scan.get("reasons", [])])
             return (
-                f"🚨 **GRADE A+ {signal} SETUP DETECTED FOR {self.user_name.upper()}!**\n\n"
-                f"📊 **Confluence Score:** {score}% (Grade A+ Institutional Setup Only)\n"
+                f"🚨 **{grade.upper()} {signal} SETUP DETECTED FOR {self.user_name.upper()}!**\n\n"
+                f"📊 **Confluence Score:** {score}% ({grade} Institutional Execution)\n"
                 f"🎯 **Symbol:** XAU/USD (Gold)\n"
-                f"🟢 **Action:** {signal}\n"
+                f"🟢 **Action:** **{signal}**\n"
                 f"⚠️ **Risk Rate:** {risk_rate}\n"
                 f"📍 **Entry Zone:** {entry_zone}\n"
                 f"💵 **Entry Price:** ${plan.get('entry_price', price):,.2f}\n"
@@ -111,8 +114,8 @@ class ChatEngine:
                 f"💰 **Take Profit 2 (TP2):** ${plan.get('tp2', 0.0):,.2f}\n"
                 f"💰 **Take Profit 3 (TP3):** ${plan.get('tp3', 0.0):,.2f} *(Runner)*\n"
                 f"⚖️ **Recommended Lot:** {plan.get('recommended_lot_size', 0.01)} Lots (Account: ${plan.get('account_balance', settings.ACCOUNT_BALANCE):,.0f} | Risk: ${plan.get('actual_dollar_risk', 5.0):,.2f})\n\n"
-                f"📌 **SMC Reasons:** {scan.get('reason', 'Trend + FVG + Liquidity confirmed.')}\n\n"
-                f"🚀 *I have also pushed this alert directly to your Telegram! Take this trade with strict risk management.*"
+                f"📌 **SMC Institutional Reasons:**\n{reasons_str}\n\n"
+                f"🚀 *Take this trade strictly inside the Entry Zone with proper risk management!*"
             )
 
         if signal == "LOCKOUT" or not news_eval.get("is_safe", True):
@@ -124,32 +127,25 @@ class ChatEngine:
                 f"• Strategy: Wait 10 minutes post-release. I will evaluate the fundamental shock and give you a high-probability momentum continuation setup!"
             )
 
-        # Market in active consolidation / scanning (Below 85% Confluence)
-        df = technical_engine.fetch_market_data("XAUUSD", timeframe="15m", period="5d")
-        ema200 = price - 12.0
-        atr = 5.5
-        if df is not None and len(df) > 50:
-            ema200 = round(float(df["Close"].ewm(span=200).mean().iloc[-1]), 2)
-            atr = round(float(df["High"].iloc[-1] - df["Low"].iloc[-1]), 2)
-            price = round(float(df["Close"].iloc[-1]), 2)
-
-        bias = "BULLISH" if price > ema200 else "BEARISH"
-        action = "BUY" if bias == "BULLISH" else "SELL"
+        # Developing setup on chart (gives full actionable gameplan)
+        risk_rate = "⚠️ There's a high risk in this trade"
+        entry_zone = plan.get('entry_zone', f"${price-0.75:.2f} - ${price+0.75:.2f}")
+        reasons_str = "\n".join([f" • {r}" for r in scan.get("reasons", [])])
 
         return (
-            f"⏳ **NO ACTIVE GRADE A+ SIGNAL RIGHT NOW, {self.user_name.upper()}!**\n\n"
-            f"🛑 **ACTION:** **DO NOT ENTER ANY TRADES RIGHT NOW**\n\n"
-            f"📊 **LIVE MARKET SNAPSHOT:**\n"
-            f"• **Live Price:** ${price:,.2f}\n"
-            f"• **Current Confluence Score:** **{score}%** *(We require 85%+ for Grade A+)*\n"
-            f"• **Market Regime:** {bias} Consolidation (200 EMA Baseline: ${ema200:,.2f})\n"
-            f"• **Status:** {scan.get('reason', 'Awaiting liquidity sweep and structural displacement.')}\n\n"
-            f"🔍 **WHY WE ARE WAITING (CAPITAL PRESERVATION):**\n"
-            f"The market is currently in the middle of a move or range. Entering now would be **chasing price** without institutional confirmation, which risks getting stopped out.\n\n"
-            f"🔭 **WHAT THE BOT IS WATCHING FOR:**\n"
-            f"• Watching for price to retrace and tap key Fair Value Gaps (FVG) or sweep liquidity.\n"
-            f"• Potential bias on next setup: **{action}** (following the 15m trend).\n\n"
-            f"🚀 *Relax Ahmed: You don't have to watch the chart! The scanner is running in the background every 3 minutes. The exact moment an 85%+ confluence Grade A+ setup forms, your phone will buzz with an official [TAKE THIS TRADE] signal!*"
+            f"🎯 **ACTIVE GOLD (XAU/USD) SETUP FOR {self.user_name.upper()}**\n\n"
+            f"📊 **Market Confluence:** {score}% (Developing Grade A Setup)\n"
+            f"🟢 **Action:** **{candidate}**\n"
+            f"⚠️ **Risk Rate:** {risk_rate}\n"
+            f"📍 **Entry Zone:** {entry_zone}\n"
+            f"💵 **Current Price / Entry:** ${plan.get('entry_price', price):,.2f}\n"
+            f"🛑 **Stop Loss (SL):** ${plan.get('stop_loss', price - 6.0):,.2f}\n"
+            f"💰 **Take Profit 1 (TP1):** ${plan.get('tp1', price + 9.0):,.2f} *(1:1.5 RR)*\n"
+            f"💰 **Take Profit 2 (TP2):** ${plan.get('tp2', price + 18.0):,.2f} *(1:3.0 RR)*\n"
+            f"💰 **Take Profit 3 (TP3):** ${plan.get('tp3', price + 30.0):,.2f} *(Runner)*\n"
+            f"⚖️ **Recommended Lot:** {plan.get('recommended_lot_size', 0.01)} Lots (Account: ${plan.get('account_balance', settings.ACCOUNT_BALANCE):,.0f} | Risk: ${plan.get('actual_dollar_risk', 5.0):,.2f})\n\n"
+            f"📌 **SMC Reasons:**\n{reasons_str}\n\n"
+            f"💡 *Advice for Ahmed: This setup is currently at {score}% confluence. Because it's developing, {risk_rate}. Execute strictly with 0.01 lots!*"
         )
 
     def _handle_news_query(self, msg_lower: str) -> str:

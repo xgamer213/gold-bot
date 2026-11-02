@@ -25,7 +25,7 @@ class Settings(BaseModel):
     SECONDARY_SYMBOLS: list = Field(default=["EURUSD", "GBPUSD", "USDJPY"], description="Secondary Forex pairs")
     
     # Quality & Confluence Filter
-    MIN_CONFLUENCE_SCORE: int = Field(default=int(os.getenv("MIN_CONFLUENCE_SCORE", "85")), description="Minimum confluence score (0-100) to trigger a signal. Enforces high quality.")
+    MIN_CONFLUENCE_SCORE: int = Field(default=int(os.getenv("MIN_CONFLUENCE_SCORE", "75")), description="Minimum confluence score (0-100) to trigger an autonomous signal. Enforces high quality.")
     
     # ForexFactory & Economic News Filter
     NEWS_FILTER_ENABLED: bool = Field(default=os.getenv("NEWS_FILTER_ENABLED", "True").lower() == "true", description="Enable economic calendar news filtering")
